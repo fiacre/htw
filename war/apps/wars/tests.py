@@ -1,5 +1,5 @@
 from django.test import TestCase
-from .models import HashTag, Tweet, Battle, HashTagForm
+from .models import HashTag, Battle, BattleForm
 from django.contrib.auth.models import User
 from datetime import timedelta, datetime
 from django.utils import timezone
@@ -14,29 +14,25 @@ from django.db.models.signals import post_save
 
 class TestModels(TestCase):
     def setUp(self):
+        self.user = User.objects.create(
+            username='test user',
+            email='testuser@foo.com'
+        )
+        self.user.save()
         self.now = timezone.now()
         self.later = self.now + timedelta(hours=1)
         self.hashtag = HashTag.objects.create(
             hashtag='#potus',
-            start_time=self.now,
-            end_time=self.later
+            # start_time=self.now,
+            # end_time=self.later,
+            user=self.user
         )
         self.hashtag.save()
 
-        self.tweet = Tweet.objects.create(
-            id=1001,
-            content='Quick brown fox')
-        self.tweet.save()
-        self.tweet.hashtags = (self.hashtag, )
-        self.tweet.save()
-
     def test_hashtag(self):
         self.assertEqual(self.hashtag.hashtag, "#potus")
+        self.assertEqual(self.hashtag.user, self.user)
         self.assertIsNotNone(self.hashtag.created)
-
-    def test_tweet(self):
-        self.assertEqual(self.tweet.content, 'Quick brown fox')
-        self.assertIn(self.hashtag, self.tweet.hashtags.all())
 
     # def test_battle(self):
     #     user1 = User.objects.create(
@@ -57,60 +53,79 @@ class TestModels(TestCase):
     #     self.assertEqual(b.user_blue, user2)
     #     self.assertEqual(b.hashtag, self.hashtag)
 
-    def tearDown(self):
-        self.hashtag.delete()
-        self.tweet.delete()
-
-    def test_start_time_valid(self):
+    def test_battle_start_time_validate(self):
         start_time = datetime(2010, 1, 1, 1, 1, 1, 1, pytz.UTC)
-        hashtag = HashTag.objects.create(
-            hashtag='#potus',
+        user2 = User.objects.create(
+            username='test_user2',
+            email="test123@foo.com"
+        )
+        user2.save()
+        hashtag2 = HashTag.objects.create(
+            hashtag="#President",
+            user=user2
+        )
+        battle = Battle.objects.create(
+            hashtag_right=self.hashtag,
+            hashtag_left=hashtag2,
             start_time=start_time,
             end_time=self.later
         )
         with self.assertRaises(ValidationError):
-            hashtag.full_clean()
+            battle.full_clean()
 
-    def test_hashtag_validation(self):
+    def test_battle_validation(self):
         later = timezone.now() + timedelta(days=1)
         earlier = timezone.now()
-        hashtag_form = HashTagForm(
+        battle_form = BattleForm(
             {
-                'hashtag': '#foobar',
+                'hashtag_right': '#foobar',
+                'hashtag_left': '#blah',
                 'start_time': later,
                 'end_time': earlier
             },
-            instance=HashTag.objects.create(
-                hashtag='#somename',
+            instance=Battle.objects.create(
+                hashtag_left=HashTag.objects.create(
+                    hashtag='#somename',
+                    user=User.objects.create(
+                        username="erret",
+                        email="ert@foo.com"
+                    )
+                ),
                 start_time=later,
                 end_time=earlier
             )
         )
         with self.assertRaises(ValidationError):
-            hashtag_form.is_valid()
+            battle_form.is_valid()
 
 
 class TestBattle(TestCase):
     def setUp(self):
-        self.user_red = User.objects.create(
-            username='test user',
-            email='testuser1@foo.com'
+        self.user_left = User.objects.create(
+            username="testabc",
+            email="tastabc@foo.com"
         )
-        self.user_red.save()
-        self.user_blue = User.objects.create(
-            username='test user2',
-            email='testuser2@foo.com'
+        self.user_right = User.objects.create(
+            username="test123",
+            email='test123@foo.com'
         )
-        self.user_blue.save()
-        self.hashtag = HashTag.objects.create(
-            hashtag='#potus',
+        self.user_right.save()
+        self.user_left.save()
+        self.hashtag_left = HashTag.objects.create(
+            user=self.user_left,
+            hashtag="#potus"
+        )
+        self.hashtag_right = HashTag.objects.create(
+            hashtag='#slotus',
+            user=self.user_right
+        )
+        self.hashtag_left.save()
+        self.hashtag_right.save()
+        self.battle = Battle.objects.create(
+            hashtag_left=self.hashtag_left,
+            hashtag_right=self.hashtag_right,
             start_time=timezone.now(),
             end_time=timezone.now() + timedelta(seconds=30)
-        )
-        self.battle = Battle.objects.create(
-            user_red=self.user_red,
-            user_blue=self.user_blue,
-            hashtag=self.hashtag
         )
 
     @mock.patch('war.apps.wars.jobs.count_spelling_errors.delay')

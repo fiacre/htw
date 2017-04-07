@@ -1,14 +1,13 @@
 from django.contrib import admin
-from .models import HashTag, Tweet
-
-
-class TweetAdmin(admin.ModelAdmin):
-    pass
+from .models import HashTag, Battle
 
 
 class HashTagAdmin(admin.ModelAdmin):
     pass
 
 
-admin.site.register(Tweet, TweetAdmin)
+class BattleAdmin(admin.ModelAdmin):
+    pass
+
+admin.site.register(Battle, BattleAdmin)
 admin.site.register(HashTag, HashTagAdmin)

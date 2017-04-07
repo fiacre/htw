@@ -15,47 +15,15 @@ def validate_future(dt):
         )
 
 
-# def validate_is_later(start_time, end_time):
-#     if start_time > end_time:
-#         raise ValidationError(
-#             _('%(end) must be later than %(start'),
-#             params={'start': start_time, 'end': end_time},
-#         )
-
-
 class HashTag(TrackingModel):
     ''' class for tracking hashtags
     '''
     # Todo Validate hashtag is a hashtag in the twitter sense
     hashtag = models.CharField(max_length=32, null=False)
-    start_time = models.DateTimeField(
-        null=False, 
-        blank=True, 
-        default=timezone.now(), 
-        validators=[validate_future]
-    )
-    # TODO : add validation that start_time > end_time
-    end_time = models.DateTimeField(
-        null=False,
-        blank=True,
-        default=timezone.now() + timedelta(seconds=60)
-    )
+    user = models.ForeignKey(User, null=False, blank=True)
 
     def __str__(self):
-        return "HashTag: {}, {}, {}".format(self.hashtag, str(self.start_time), str(self.end_time))
-
-
-class HashTagForm(ModelForm):
-    def is_valid(self, *args, **kwargs):
-        start_time = self['start_time'].value()
-        end_time = self['end_time'].value()
-        if start_time > end_time:
-            raise ValidationError("Start_time must be earlier than end_time")
-        super().is_valid(*args, **kwargs)
-
-    class Meta:
-        model = HashTag
-        fields = ['hashtag', 'start_time', 'end_time']
+        return "HashTag: {}, {}, {}".format(self.hashtag, self.user)
 
 
 class Tweet(TrackingModel):
@@ -72,9 +40,33 @@ class Tweet(TrackingModel):
 
 
 class Battle(TrackingModel):
-    user_red = models.ForeignKey(User, related_name='%(class)s_red')
-    user_blue = models.ForeignKey(User, related_name='%(class)s_blue')
-    hashtag = models.ForeignKey(HashTag)
+    hashtag_right = models.OneToOneField(HashTag, related_name='hashtag_right')
+    hashtag_left = models.OneToOneField(HashTag, related_name='hashtag_left')
+    start_time = models.DateTimeField(
+        null=False, 
+        blank=True, 
+        default=timezone.now(), 
+        validators=[validate_future]
+    )
+    end_time = models.DateTimeField(
+        null=False,
+        blank=True,
+        default=timezone.now() + timedelta(seconds=60)
+    )
 
     def __str__(self):
-        return "Battle: {}, {}, {}".format(self.user_red, self.user_blue, self.hashtag)
+        return "{}, {}, {}, {}".format(
+            self.hashtag_left, self.hashtag_right, self.start_time, self.end_time)
+
+
+class BattleForm(ModelForm):
+    def is_valid(self, *args, **kwargs):
+        start_time = self['start_time'].value()
+        end_time = self['end_time'].value()
+        if start_time > end_time:
+            raise ValidationError("Start_time must be earlier than end_time")
+        super().is_valid(*args, **kwargs)
+
+    class Meta:
+        model = Battle
+        fields = ['hashtag_right', 'hashtag_left', 'start_time', 'end_time']

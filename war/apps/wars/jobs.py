@@ -11,7 +11,7 @@ def get_tweets_since(tweet_id):
 
 
 @job('default', timeout=3600)
-def count_spelling_errors(dt):
+def count_spelling_errors(dt, hashtag_obj):
     sc = SpellChecker()
     redis_conn = Redis()
     q = Queue(connection=redis_conn)
