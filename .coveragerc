@@ -1,0 +1,7 @@
+[paths]
+source =
+    war/*.py
+
+[run]
+omit = 
+    ../venv/*
