@@ -2,10 +2,11 @@ from .models import HashTag, Tweet
 from .import twitter_settings
 import tweepy
 from tweepy.parsers import JSONParser
-from containers import defaultdict
+from collections import defaultdict
 import string
 import enchant
 
+# TODO move to env
 consumer_key = getattr(twitter_settings, 'CONSUMER_KEY', None)
 consumer_secret = getattr(twitter_settings, 'CONSUMER_SECRET', None)
 access_token = getattr(twitter_settings, 'ACCESS_TOKEN', None)

@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from war.utils.base_model import TrackingModel
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext_lazy as _
+# from django.utils.translation import ugettext_lazy as _
 from datetime import timedelta
 from django.forms import ModelForm
 from django.utils import timezone
@@ -15,12 +15,12 @@ def validate_future(dt):
         )
 
 
-def validate_is_later(start_time, end_time):
-    if start_time > end_time:
-        raise ValidationError(
-            _('%(end) must be later than %(start'),
-            params={'start': start_time, 'end': end_time},
-        )
+# def validate_is_later(start_time, end_time):
+#     if start_time > end_time:
+#         raise ValidationError(
+#             _('%(end) must be later than %(start'),
+#             params={'start': start_time, 'end': end_time},
+#         )
 
 
 class HashTag(TrackingModel):
@@ -28,7 +28,6 @@ class HashTag(TrackingModel):
     '''
     # Todo Validate hashtag is a hashtag in the twitter sense
     hashtag = models.CharField(max_length=32, null=False)
-    user = models.ForeignKey(User, default=1)
     start_time = models.DateTimeField(
         null=False, 
         blank=True, 
@@ -56,7 +55,7 @@ class HashTagForm(ModelForm):
 
     class Meta:
         model = HashTag
-        fields = ['hashtag', 'user', 'start_time', 'end_time']
+        fields = ['hashtag', 'start_time', 'end_time']
 
 
 class Tweet(TrackingModel):

@@ -8,19 +8,16 @@ import enchant
 import string
 from django.core.exceptions import ValidationError
 import pytz
+from unittest import mock
+from django.db.models.signals import post_save
 
 
 class TestModels(TestCase):
     def setUp(self):
         self.now = timezone.now()
         self.later = self.now + timedelta(hours=1)
-        self.user = User.objects.create(
-            username='test user',
-            email='testuser1@foo.com')
-        self.user.save()
         self.hashtag = HashTag.objects.create(
             hashtag='#potus',
-            user=self.user,
             start_time=self.now,
             end_time=self.later
         )
@@ -33,32 +30,32 @@ class TestModels(TestCase):
         self.tweet.hashtags = (self.hashtag, )
         self.tweet.save()
 
-    def test_user(self):
-        self.assertEqual(self.user.username, 'test user')
-        self.assertEqual(self.user.email, 'testuser1@foo.com')
-
     def test_hashtag(self):
         self.assertEqual(self.hashtag.hashtag, "#potus")
-        self.assertEqual(self.user, self.hashtag.user)
         self.assertIsNotNone(self.hashtag.created)
 
     def test_tweet(self):
         self.assertEqual(self.tweet.content, 'Quick brown fox')
         self.assertIn(self.hashtag, self.tweet.hashtags.all())
 
-    def test_battle(self):
-        user2 = User.objects.create(
-            username='test user2',
-            email='testuser2@foo.com')
-        user2.save()
-        b = Battle(user_red=self.user,
-            user_blue=user2,
-            hashtag=self.hashtag
-        )
-        b.save()
-        self.assertEqual(b.user_red, self.user)
-        self.assertEqual(b.user_blue, user2)
-        self.assertEqual(b.hashtag, self.hashtag)
+    # def test_battle(self):
+    #     user1 = User.objects.create(
+    #         username='test user1',
+    #         email='testuser1@foo.com'
+    #     )
+    #     user1.save()
+    #     user2 = User.objects.create(
+    #         username='test user2',
+    #         email='testuser2@foo.com')
+    #     user2.save()
+    #     b = Battle(user_red=user1,
+    #         user_blue=user2,
+    #         hashtag=self.hashtag
+    #     )
+    #     b.save()
+    #     self.assertEqual(b.user_red, user1)
+    #     self.assertEqual(b.user_blue, user2)
+    #     self.assertEqual(b.hashtag, self.hashtag)
 
     def tearDown(self):
         self.hashtag.delete()
@@ -68,7 +65,6 @@ class TestModels(TestCase):
         start_time = datetime(2010, 1, 1, 1, 1, 1, 1, pytz.UTC)
         hashtag = HashTag.objects.create(
             hashtag='#potus',
-            user=self.user,
             start_time=start_time,
             end_time=self.later
         )
@@ -81,19 +77,49 @@ class TestModels(TestCase):
         hashtag_form = HashTagForm(
             {
                 'hashtag': '#foobar',
-                'user': self.user,
                 'start_time': later,
                 'end_time': earlier
             },
             instance=HashTag.objects.create(
                 hashtag='#somename',
-                user=self.user,
                 start_time=later,
                 end_time=earlier
             )
         )
         with self.assertRaises(ValidationError):
             hashtag_form.is_valid()
+
+
+class TestBattle(TestCase):
+    def setUp(self):
+        self.user_red = User.objects.create(
+            username='test user',
+            email='testuser1@foo.com'
+        )
+        self.user_red.save()
+        self.user_blue = User.objects.create(
+            username='test user2',
+            email='testuser2@foo.com'
+        )
+        self.user_blue.save()
+        self.hashtag = HashTag.objects.create(
+            hashtag='#potus',
+            start_time=timezone.now(),
+            end_time=timezone.now() + timedelta(seconds=30)
+        )
+        self.battle = Battle.objects.create(
+            user_red=self.user_red,
+            user_blue=self.user_blue,
+            hashtag=self.hashtag
+        )
+
+    @mock.patch('war.apps.wars.jobs.count_spelling_errors.delay')
+    def test_post_save_signal(self, cse):
+        with mock.patch('war.apps.wars.signals.start_battle') as mock_signal:
+            post_save.connect(mock_signal, sender=Battle, dispatch_uid="test_start_battle")
+            self.battle.save()
+            self.assertEquals(mock_signal.call_count, 1)
+        self.assertTrue(cse.called)
 
 
 class TestTwitterAPI(TestCase):
