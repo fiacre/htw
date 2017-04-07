@@ -51,9 +51,10 @@ class TestModels(TestCase):
     #     b.save()
     #     self.assertEqual(b.user_red, user1)
     #     self.assertEqual(b.user_blue, user2)
-    #     self.assertEqual(b.hashtag, self.hashtag)
+    #     self.assertEqual(b.hashtag, self.hashtag)        
 
-    def test_battle_start_time_validate(self):
+    @mock.patch('war.apps.wars.jobs.count_spelling_errors.delay')
+    def test_battle_start_time_validate(self, cse):
         start_time = datetime(2010, 1, 1, 1, 1, 1, 1, pytz.UTC)
         user2 = User.objects.create(
             username='test_user2',
@@ -73,7 +74,8 @@ class TestModels(TestCase):
         with self.assertRaises(ValidationError):
             battle.full_clean()
 
-    def test_battle_validation(self):
+    @mock.patch('war.apps.wars.jobs.count_spelling_errors.delay')
+    def test_battle_validation(self, cse):
         later = timezone.now() + timedelta(days=1)
         earlier = timezone.now()
         battle_form = BattleForm(
@@ -89,6 +91,13 @@ class TestModels(TestCase):
                     user=User.objects.create(
                         username="erret",
                         email="ert@foo.com"
+                    )
+                ),
+                hashtag_right=HashTag.objects.create(
+                    hashtag='#someother',
+                    user=User.objects.create(
+                        username="foobar",
+                        email="bar@foo.com"
                     )
                 ),
                 start_time=later,
