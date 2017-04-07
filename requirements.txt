@@ -20,3 +20,5 @@ requests-oauthlib==0.8.0
 rq==0.7.1
 rq-scheduler==0.7.0
 six==1.10.0
+pyenchant==1.6.8
+tweepy==3.5.0

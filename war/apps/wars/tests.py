@@ -1,12 +1,13 @@
 from django.test import TestCase
 from .models import HashTag, Tweet, Battle, HashTagForm
 from django.contrib.auth.models import User
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils import timezone
 from collections import defaultdict
 import enchant
 import string
 from django.core.exceptions import ValidationError
+import pytz
 
 
 class TestModels(TestCase):
@@ -17,7 +18,6 @@ class TestModels(TestCase):
             username='test user',
             email='testuser1@foo.com')
         self.user.save()
-
         self.hashtag = HashTag.objects.create(
             hashtag='#potus',
             user=self.user,
@@ -45,39 +45,54 @@ class TestModels(TestCase):
     def test_tweet(self):
         self.assertEqual(self.tweet.content, 'Quick brown fox')
         self.assertIn(self.hashtag, self.tweet.hashtags.all())
-        # self.assertIsNotNone(self.tweet.uuid)
-        # self.assertIsNotNone(self.tweet.created)
+
+    def test_battle(self):
+        user2 = User.objects.create(
+            username='test user2',
+            email='testuser2@foo.com')
+        user2.save()
+        b = Battle(user_red=self.user,
+            user_blue=user2,
+            hashtag=self.hashtag
+        )
+        b.save()
+        self.assertEqual(b.user_red, self.user)
+        self.assertEqual(b.user_blue, user2)
+        self.assertEqual(b.hashtag, self.hashtag)
 
     def tearDown(self):
         self.hashtag.delete()
         self.tweet.delete()
 
-    def test_hashtag_validation(self):
+    def test_start_time_valid(self):
+        start_time = datetime(2010, 1, 1, 1, 1, 1, 1, pytz.UTC)
+        hashtag = HashTag.objects.create(
+            hashtag='#potus',
+            user=self.user,
+            start_time=start_time,
+            end_time=self.later
+        )
         with self.assertRaises(ValidationError):
-            later = timezone.now() + timedelta(days=1)
-            earlier = timezone.now()
-            hashtag_form = HashTagForm(
-                {
-                    'hashtag': '#foobar',
-                    'user': self.user,
-                    'start_time': later,
-                    'end_time': earlier
-                },
-                instance=HashTag.objects.create(
-                    hashtag='#somename',
-                    user=self.user,
-                    start_time=later,
-                    end_time=earlier
-                )
-            )
+            hashtag.full_clean()
 
-            # hashtag = HashTag.objects.create(
-            #     hashtag='#somename',
-            #     user=self.user,
-            #     start_time=later,
-            #     end_time=earlier
-            # )
-            # hashtag.save()
+    def test_hashtag_validation(self):
+        later = timezone.now() + timedelta(days=1)
+        earlier = timezone.now()
+        hashtag_form = HashTagForm(
+            {
+                'hashtag': '#foobar',
+                'user': self.user,
+                'start_time': later,
+                'end_time': earlier
+            },
+            instance=HashTag.objects.create(
+                hashtag='#somename',
+                user=self.user,
+                start_time=later,
+                end_time=earlier
+            )
+        )
+        with self.assertRaises(ValidationError):
             hashtag_form.is_valid()
 
 

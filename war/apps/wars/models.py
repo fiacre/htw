@@ -8,6 +8,13 @@ from django.forms import ModelForm
 from django.utils import timezone
 
 
+def validate_future(dt):
+    if dt < timezone.now():
+        raise ValidationError(
+            '{} is an invalid start time!'.format(dt)
+        )
+
+
 def validate_is_later(start_time, end_time):
     if start_time > end_time:
         raise ValidationError(
@@ -22,7 +29,12 @@ class HashTag(TrackingModel):
     # Todo Validate hashtag is a hashtag in the twitter sense
     hashtag = models.CharField(max_length=32, null=False)
     user = models.ForeignKey(User, default=1)
-    start_time = models.DateTimeField(null=False, blank=True, default=timezone.now())
+    start_time = models.DateTimeField(
+        null=False, 
+        blank=True, 
+        default=timezone.now(), 
+        validators=[validate_future]
+    )
     # TODO : add validation that start_time > end_time
     end_time = models.DateTimeField(
         null=False,
