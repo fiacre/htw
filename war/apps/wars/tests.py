@@ -1,5 +1,5 @@
 from django.test import TestCase
-from .models import HashTag, Battle, BattleForm
+from .models import HashTag, Battle, BattleForm, Tweet
 from django.contrib.auth.models import User
 from datetime import timedelta, datetime
 from django.utils import timezone
@@ -33,6 +33,21 @@ class TestModels(TestCase):
         self.assertEqual(self.hashtag.hashtag, "#potus")
         self.assertEqual(self.hashtag.user, self.user)
         self.assertIsNotNone(self.hashtag.created)
+
+    def test_hashtag_str(self):
+        user = User.objects.create(
+            username="foobar",
+            email="abcdefg@foo.com"
+        )
+        user.save()
+        hashtag = HashTag.objects.create(
+            user=user,
+            hashtag="#abcd"
+        )
+        hashtag.save()
+
+        self.assertIsNotNone(str(hashtag))
+        self.assertEqual(str(hashtag), "HashTag: #abcd, foobar")
 
     # def test_battle(self):
     #     user1 = User.objects.create(
@@ -146,20 +161,58 @@ class TestBattle(TestCase):
         self.assertTrue(cse.called)
 
 
+class TestTweet(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(
+            username="this is a user",
+            email='my_email@domain.com'
+        )
+        self.user2 = User.objects.create(
+            username='this is also a user',
+            email='myptheremail@domain.com'
+        )
+        self.user2.save()
+        self.user2.save()
+        self.hashtag1 = HashTag.objects.create(
+            user=self.user1,
+            hashtag="#somehashtag"
+        )
+        self.hashtag2 = HashTag.objects.create(
+            user=self.user2,
+            hashtag="#anotherhashtag"
+        )
+        self.hashtag1.save()
+        self.hashtag2.save()
+        self.tweet = Tweet.objects.create(
+            id=824794161878597633,
+            content="some content"
+        )
+        self.tweet.save()
+
+    def test_add_hashtags(self):
+        self.tweet.hashtags = [self.hashtag1.hashtag, self.hashtag2.hashtag]
+        self.tweet.save()
+        self.assertEqual(self.tweet.hashtags, [self.hashtag1.hashtag, self.hashtag2.hashtag])
+        self.assertEqual(self.tweet.num_errors, None)
+        self.tweet.num_errors = 3
+        self.tweet.save()
+        self.assertEqual(self.tweet.num_errors, 3)
+
+
 class TestTwitterAPI(TestCase):
     """
     This is NOT a unit test
     """
     def setUp(self):
-        from .import twitter_settings
+        from war.settings import settings_twitter
         import tweepy
         from tweepy.parsers import JSONParser
         self.d = enchant.Dict("en_US")
 
-        consumer_key = getattr(twitter_settings, 'CONSUMER_KEY', None)
-        consumer_secret = getattr(twitter_settings, 'CONSUMER_SECRET', None)
-        access_token = getattr(twitter_settings, 'ACCESS_TOKEN', None)
-        access_token_secret = getattr(twitter_settings, 'ACCESS_TOKEN_SECRET', None)
+        consumer_key = getattr(settings_twitter, 'CONSUMER_KEY', None)
+        consumer_secret = getattr(settings_twitter, 'CONSUMER_SECRET', None)
+        access_token = getattr(settings_twitter, 'ACCESS_TOKEN', None)
+        access_token_secret = getattr(settings_twitter, 'ACCESS_TOKEN_SECRET', None)
 
         self.auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         self.auth.set_access_token(access_token, access_token_secret)
@@ -170,10 +223,10 @@ class TestTwitterAPI(TestCase):
         query = '#iggypop'
         result = self.api.search(query, count=20, lang='en')
 
-        print(result.keys())
+        # print(result.keys())
         for item in result.get('statuses'):
-            print(item.get('id'))
-            print(item.get('text'))
+            # print(item.get('id'))
+            # print(item.get('text'))
             # errors.append(self.chkr.set_text(item.get('text')))
             for w in item.get('text').split():
                 w.strip(string.punctuation)

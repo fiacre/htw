@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import User
 from war.utils.base_model import TrackingModel
 from django.core.exceptions import ValidationError
@@ -23,16 +24,16 @@ class HashTag(TrackingModel):
     user = models.ForeignKey(User, null=False, blank=True)
 
     def __str__(self):
-        return "HashTag: {}, {}, {}".format(self.hashtag, self.user)
+        return "HashTag: {}, {}".format(self.hashtag, self.user)
 
 
 class Tweet(TrackingModel):
     ''' class to track tweets
         has many hashtags
     '''
-    id = models.IntegerField(primary_key=True)
+    id = models.BigIntegerField(primary_key=True)
     content = models.CharField(max_length=128)
-    hashtags = models.ManyToManyField(HashTag)
+    hashtags = ArrayField(models.CharField(max_length=128, null=True), null=True)
     num_errors = models.IntegerField(null=True)
 
     def __str__(self):

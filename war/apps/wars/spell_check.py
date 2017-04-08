@@ -1,5 +1,5 @@
 from .models import HashTag, Tweet
-from .import twitter_settings
+from war.settings import settings_twitter
 import tweepy
 from tweepy.parsers import JSONParser
 from collections import defaultdict
@@ -7,13 +7,22 @@ import string
 import enchant
 
 # TODO move to env
-consumer_key = getattr(twitter_settings, 'CONSUMER_KEY', None)
-consumer_secret = getattr(twitter_settings, 'CONSUMER_SECRET', None)
-access_token = getattr(twitter_settings, 'ACCESS_TOKEN', None)
-access_token_secret = getattr(twitter_settings, 'ACCESS_TOKEN_SECRET', None)
+consumer_key = getattr(settings_twitter, 'CONSUMER_KEY', None)
+consumer_secret = getattr(settings_twitter, 'CONSUMER_SECRET', None)
+access_token = getattr(settings_twitter, 'ACCESS_TOKEN', None)
+access_token_secret = getattr(settings_twitter, 'ACCESS_TOKEN_SECRET', None)
 
 
 class SpellChecker:
+    '''
+        @kwargs: {'hashtag' : HashTag object}
+        takes a hashtag obj, connects to twitter
+        checks if there are any tweets in the DB and gets the latest ID
+        searches for tweets with ID greater than all previous tweets that have
+            the given hashtag
+        counts the spelling errors in those tweets
+        writes the tweet content and num spelling errors to the DB
+    '''
     def __init__(self, *args, **kwargs):
         self.hashtags = HashTag.objects.get(kwargs.get('hashtag'))
         self.dictionary = enchant.Dict("en_US")
@@ -29,15 +38,20 @@ class SpellChecker:
         if last_tweet:
             last_id = last_tweet.id
 
-        result = self.api.search(self.hashtag, lang='en', since_id=last_id)
+        result = self.api.search(self.hashtags.hashtag, lang='en', since_id=last_id)
         for item in result.get('statuses'):
+            print("ID: ", item.get('id_str'))
+            print("Text: ", item.get('text'))
+            print([hashtag.get('text') for hashtag in item.get('entities').get('hashtags')])
             tweet, created = Tweet.objects.get_or_create(
-                id=item.get('id'),
-                content=item.get('text')
+                id=int(item.get('id_str'))
             )
             if created:
-                tweet.hashtags = tuple([x for x in self.hashtags])
+                tweet.hashtags = [x.hashtag for x in self.hashtags]
+                tweet.hashtags += [hashtag.get('text') for hashtag in item.get('entities').get('hashtags')]
+                tweet.content = item.get('text')
                 tweet.save()
+
             errors = self._spelling_errors(tweet.content)
             tweet.num_errors = sum(errors.values())
             tweet.save()
