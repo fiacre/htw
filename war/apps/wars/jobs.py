@@ -2,17 +2,17 @@ from rq import Queue
 from redis import Redis
 from rq.decorators import job
 import time
-from .spell_check import SpellChecker
+from .tweet_handler import TweetHandler
 
 
 @job
-def get_tweets_since(tweet_id):
+def tweet_sentiment(tweet_id):
     pass
 
 
 @job('default', timeout=3600)
 def count_spelling_errors(dt, hashtag_obj):
-    sc = SpellChecker()
+    th = TweetHandler()
     redis_conn = Redis()
     q = Queue(connection=redis_conn)
 

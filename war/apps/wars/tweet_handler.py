@@ -13,7 +13,7 @@ access_token = getattr(settings_twitter, 'ACCESS_TOKEN', None)
 access_token_secret = getattr(settings_twitter, 'ACCESS_TOKEN_SECRET', None)
 
 
-class SpellChecker:
+class TweetHandler:
     '''
         @kwargs: {'hashtag' : HashTag object}
         takes a hashtag obj, connects to twitter
@@ -32,7 +32,11 @@ class SpellChecker:
         self.auth.set_access_token(access_token, access_token_secret)
         self.api = tweepy.API(self.auth, parser=JSONParser())
 
-    def _tweets(self):
+    def tweets(self):
+        '''
+        get the last id and search with hashtag since last id
+        save tweets
+        '''
         last_id = 0
         last_tweet = Tweet.objects.last()
         if last_tweet:
@@ -52,11 +56,11 @@ class SpellChecker:
                 tweet.content = item.get('text')
                 tweet.save()
 
-            errors = self._spelling_errors(tweet.content)
+            errors = self.spelling_errors(tweet.content)
             tweet.num_errors = sum(errors.values())
             tweet.save()
 
-    def _spelling_errors(self, text):
+    def spelling_errors(self, text):
         errors = defaultdict(int)
         for w in text.split():
             w.strip(string.punctuation)

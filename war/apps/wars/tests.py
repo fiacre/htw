@@ -1,15 +1,15 @@
-from django.test import TestCase
 from .models import HashTag, Battle, BattleForm, Tweet
-from django.contrib.auth.models import User
-from datetime import timedelta, datetime
-from django.utils import timezone
 from collections import defaultdict
-import enchant
-import string
+from datetime import timedelta, datetime
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-import pytz
-from unittest import mock
 from django.db.models.signals import post_save
+from django.test import TestCase
+from django.utils import timezone
+from unittest import mock
+import enchant
+import pytz
+import string
 
 
 class TestModels(TestCase):
@@ -23,8 +23,6 @@ class TestModels(TestCase):
         self.later = self.now + timedelta(hours=1)
         self.hashtag = HashTag.objects.create(
             hashtag='#potus',
-            # start_time=self.now,
-            # end_time=self.later,
             user=self.user
         )
         self.hashtag.save()
@@ -48,25 +46,6 @@ class TestModels(TestCase):
 
         self.assertIsNotNone(str(hashtag))
         self.assertEqual(str(hashtag), "HashTag: #abcd, foobar")
-
-    # def test_battle(self):
-    #     user1 = User.objects.create(
-    #         username='test user1',
-    #         email='testuser1@foo.com'
-    #     )
-    #     user1.save()
-    #     user2 = User.objects.create(
-    #         username='test user2',
-    #         email='testuser2@foo.com')
-    #     user2.save()
-    #     b = Battle(user_red=user1,
-    #         user_blue=user2,
-    #         hashtag=self.hashtag
-    #     )
-    #     b.save()
-    #     self.assertEqual(b.user_red, user1)
-    #     self.assertEqual(b.user_blue, user2)
-    #     self.assertEqual(b.hashtag, self.hashtag)        
 
     @mock.patch('war.apps.wars.jobs.count_spelling_errors.delay')
     def test_battle_start_time_validate(self, cse):
